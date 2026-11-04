@@ -1,0 +1,241 @@
+{
+  "snapshotAt": "2026-11-04T18:25:00-05:00",
+  "source": "Grok Bot usage report (shares of all Grok Bot usage; '<1%' stored as 0.5 with lt1:true)",
+  "plan": "Premium",
+  "weekly": {
+    "limitUsedPct": 84.1,
+    "grokBotUsedPct": 34.5,
+    "sharedWithOtherApps": true,
+    "resetsAt": "2026-11-05T13:58:00-05:00",
+    "window": "Oct 29 - Nov 4 (UTC)",
+    "byDayBot": [
+      {
+        "day": "2026-10-29",
+        "total": 23,
+        "bots": {
+          "Retired bots & group chats": 13,
+          "Head of Engineering": 5,
+          "App Builder": 3,
+          "Chief of Staff": 2
+        }
+      },
+      {
+        "day": "2026-10-30",
+        "total": 58,
+        "bots": {
+          "Retired bots & group chats": 20,
+          "Head of Engineering": 11,
+          "App Builder": 10,
+          "Chief of Staff": 9,
+          "Data Engineer": 8
+        }
+      },
+      {
+        "day": "2026-11-04",
+        "total": 19,
+        "bots": {
+          "Data Engineer": 9,
+          "Fleet Architect": 5,
+          "Chief of Staff": 5
+        }
+      }
+    ]
+  },
+  "last30": {
+    "window": "Oct 5 - Nov 4 (UTC)",
+    "byBotActivity": [
+      {
+        "bot": "Retired bots & group chats",
+        "total": 63,
+        "activity": {
+          "Group chats": 43,
+          "Bot-to-bot": 20,
+          "Chats with you": 0.5
+        }
+      },
+      {
+        "bot": "Chief of Staff",
+        "total": 17,
+        "activity": {
+          "Group chats": 7,
+          "Chats with you": 6,
+          "Routines": 3,
+          "Bot-to-bot": 1
+        }
+      },
+      {
+        "bot": "Head of Engineering",
+        "total": 11,
+        "activity": {
+          "Group chats": 9,
+          "Bot-to-bot": 2
+        }
+      },
+      {
+        "bot": "App Builder",
+        "total": 7,
+        "activity": {
+          "Group chats": 5,
+          "Bot-to-bot": 2
+        }
+      },
+      {
+        "bot": "Data Engineer",
+        "total": 1,
+        "activity": {
+          "Bot-to-bot": 1,
+          "Group chats": 0.5,
+          "Chats with you": 0.5
+        }
+      },
+      {
+        "bot": "Fleet Architect",
+        "total": 1,
+        "activity": {
+          "Group chats": 1,
+          "Chats with you": 0.5,
+          "Bot-to-bot": 0.5
+        }
+      }
+    ],
+    "byDayActivity": [
+      {
+        "day": "2026-10-08",
+        "total": 13,
+        "activity": {
+          "Group chats": 7,
+          "Bot-to-bot": 4,
+          "Chats with you": 2
+        }
+      },
+      {
+        "day": "2026-10-09",
+        "total": 2,
+        "activity": {
+          "Group chats": 2,
+          "Chats with you": 0.5
+        }
+      },
+      {
+        "day": "2026-10-10",
+        "total": 70,
+        "activity": {
+          "Group chats": 45,
+          "Bot-to-bot": 20,
+          "Chats with you": 3,
+          "Routines": 2
+        }
+      },
+      {
+        "day": "2026-10-13",
+        "total": 0.5,
+        "activity": {
+          "Routines": 0.5
+        }
+      },
+      {
+        "day": "2026-10-15",
+        "total": 1,
+        "activity": {
+          "Bot-to-bot": 1,
+          "Chats with you": 0.5,
+          "Group chats": 0.5,
+          "Routines": 0.5
+        }
+      },
+      {
+        "day": "2026-10-16",
+        "total": 3,
+        "activity": {
+          "Group chats": 3,
+          "Bot-to-bot": 0.5,
+          "Routines": 0.5,
+          "Chats with you": 0.5
+        }
+      },
+      {
+        "day": "2026-10-17",
+        "total": 0.5,
+        "activity": {
+          "Routines": 0.5
+        }
+      },
+      {
+        "day": "2026-10-19",
+        "total": 1,
+        "activity": {
+          "Group chats": 1,
+          "Routines": 0.5
+        }
+      },
+      {
+        "day": "2026-10-23",
+        "total": 3,
+        "activity": {
+          "Group chats": 3,
+          "Bot-to-bot": 0.5,
+          "Chats with you": 0.5,
+          "Routines": 0.5
+        }
+      },
+      {
+        "day": "2026-10-24",
+        "total": 3,
+        "activity": {
+          "Group chats": 3,
+          "Bot-to-bot": 0.5,
+          "Chats with you": 0.5,
+          "Routines": 0.5
+        }
+      },
+      {
+        "day": "2026-10-29",
+        "total": 1,
+        "activity": {
+          "Group chats": 1,
+          "Routines": 0.5,
+          "Chats with you": 0.5
+        }
+      },
+      {
+        "day": "2026-10-30",
+        "total": 2,
+        "activity": {
+          "Group chats": 1,
+          "Bot-to-bot": 1,
+          "Chats with you": 0.5
+        }
+      },
+      {
+        "day": "2026-11-04",
+        "total": 1,
+        "activity": {
+          "Bot-to-bot": 1,
+          "Chats with you": 0.5
+        }
+      }
+    ],
+    "byRoutine": [
+      {
+        "routine": "unitedstats build watch",
+        "share": 1,
+        "status": "paused"
+      },
+      {
+        "routine": "Built-in check-ins",
+        "share": 0.5
+      },
+      {
+        "routine": "Not from a routine",
+        "share": 99
+      }
+    ]
+  },
+  "notAvailable": [
+    "exact token counts",
+    "usage by project",
+    "usage by model",
+    "earlier weeks' % of limit",
+    "Cursor/Cloud Agent usage"
+  ]
+}
