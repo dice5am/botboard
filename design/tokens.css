@@ -1,0 +1,75 @@
+/* botboard design tokens — paste into app/globals.css (replaces the old :root block) */
+:root {
+  /* Surfaces */
+  --bg: #06090E;            /* page */
+  --bg-glow: rgba(46, 230, 255, 0.06); /* top radial glow only */
+  --surface: #0C1118;       /* cards */
+  --surface-2: #121924;     /* tracks, matrix cells, chips, toggles */
+  --border: #1C2531;        /* 1px card + divider */
+  --border-strong: #2A3546; /* focus-adjacent / hover */
+
+  /* Text (contrast measured on --surface) */
+  --text: #EAF2FB;          /* 16.6:1 */
+  --text-muted: #8D9AAE;    /* 6.6:1 — labels, ticks, legends */
+  --text-dim: #5F6B7D;      /* 3.4:1 — NON-TEXT ONLY (strokes, empty-day stubs) */
+
+  /* Weekly limit (hero) */
+  --grok: #2EE6FF;          /* accent = Grok Bot. Only Grok Bot-in-limit + focus ring */
+  --grok-glow: rgba(46, 230, 255, 0.45);
+  --other: #506483;         /* other apps share of the limit */
+  --left: #DCE7F3;          /* remaining capacity (outline + number) when left >= 20% */
+  --left-fill: #141C27;     /* remaining capacity segment fill (hatched) */
+  --warn: #FFB547;          /* left < 20%  (replaces --left) */
+  --crit: #FF5D5D;          /* left < 5%   (replaces --left) */
+
+  /* Bots — stable map, keyed by exact bot name in usage.json */
+  --bot-chief-of-staff: #4D8DFF;
+  --bot-head-of-engineering: #9D7BFF;
+  --bot-app-builder: #2FD9A0;
+  --bot-data-engineer: #FF7AB6;
+  --bot-fleet-architect: #C6E26A;
+  --bot-retired: #66707F;   /* 'Retired bots & group chats' — desaturated grey */
+  --bot-unknown: #7A8699;   /* fallback for any new bot name */
+
+  /* Activity types — one cyan-family ramp (all of it is Grok Bot), never reused for bots */
+  --act-group-chats: #2EE6FF;
+  --act-bot-to-bot: #1E93AD;
+  --act-chats-with-you: #E6FAFF;
+  --act-routines: #6F8794;
+
+  /* Heat matrix: cell background = rgba(46,230,255, alpha); alpha = 0.08 + 0.72*sqrt(v/max) */
+  --heat-rgb: 46, 230, 255;
+
+  /* Type */
+  --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --fs-hero: 64px;   --lh-hero: 0.9;   /* desktop 88px */
+  --fs-stat: 20px;   --lh-stat: 1.1;
+  --fs-body: 13px;   --lh-body: 1.4;
+  --fs-label: 11px;  --lh-label: 1.2;  /* uppercase section labels, tracking .14em */
+  --fs-value: 12px;  --lh-value: 1.2;  /* mono value labels on bars */
+  --fs-micro: 11px;                    /* never smaller than 11px */
+
+  /* Spacing — 4px grid */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px;
+  --page-pad: 16px;         /* desktop 32px */
+  --card-pad: 16px;         /* desktop 24px */
+  --gap: 12px;              /* desktop 20px */
+  --radius-card: 16px;
+  --radius-chip: 999px;
+  --radius-bar: 4px;
+  --touch: 44px;
+
+  /* Chart heights */
+  --h-capacity: 20px;       /* desktop 24px */
+  --h-week: 168px;          /* desktop 220px */
+  --h-month: 128px;         /* desktop 180px */
+  --h-rank-bar: 10px;
+  --h-mix: 28px;
+}
+@media (min-width: 1024px) {
+  :root {
+    --fs-hero: 88px; --page-pad: 32px; --card-pad: 24px; --gap: 20px;
+    --h-capacity: 24px; --h-week: 220px; --h-month: 180px;
+  }
+}

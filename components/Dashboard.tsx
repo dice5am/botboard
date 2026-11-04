@@ -1,174 +1,237 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Bar, BarChart, CartesianGrid, ReferenceDot, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { data, ACCENT, ACTIVITIES, ACT_COLORS, ALL_BOTS, botColor, fmt, weekSeries, monthSeries, activityMix } from '../lib';
+import { useEffect, useRef, useState } from 'react';
+import { Bar, BarChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, LabelList } from 'recharts';
+import {
+  data, T, botColor, actColor, shortBot, fmt, round1, ACTIVITIES, ACT_HEAD, MON, snapLabel, resetLabel,
+  BOTS30, weekSeries, weekBots, weekDays, monthSeries, monthDays, spikeDay, activityMix, rangeLabel, dayLabel,
+} from '../lib';
 
 const W = data.weekly;
+const used = W.limitUsedPct, grok = W.grokBotUsedPct;
+const other = round1(used - grok), left = round1(100 - used);
+const th = left < 5 ? 'var(--crit)' : left < 20 ? 'var(--warn)' : 'var(--left)';
 
-function Countdown({ to }: { to: string }) {
-  const [now, setNow] = useState<number | null>(null);
-  useEffect(() => { setNow(Date.now()); const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
-  const ms = now == null ? 0 : Math.max(0, new Date(to).getTime() - now);
-  const s = Math.floor(ms / 1000);
-  const p = (n: number) => String(n).padStart(2, '0');
-  const parts = [[Math.floor(s / 86400), 'd'], [Math.floor(s / 3600) % 24, 'h'], [Math.floor(s / 60) % 60, 'm'], [s % 60, 's']] as const;
+function fmtLeft(ms: number) {
+  const mins = Math.max(0, Math.floor(ms / 60000));
+  const d = Math.floor(mins / 1440), h = Math.floor(mins / 60) % 24, m = mins % 60;
+  return `${d ? d + 'd ' : ''}${d ? h : Math.floor(mins / 60)}h ${String(m).padStart(2, '0')}m`;
+}
+
+function CountdownChip() {
+  const resetMs = new Date(W.resetsAt).getTime();
+  const [now, setNow] = useState(() => new Date(data.snapshotAt).getTime());
+  useEffect(() => { setNow(Date.now()); const t = setInterval(() => setNow(Date.now()), 10000); return () => clearInterval(t); }, []);
+  const past = now >= resetMs;
   return (
-    <div className="countdown mono">
-      {parts.map(([v, u]) => <span key={u}><b>{now == null ? '--' : p(v)}</b><i>{u}</i></span>)}
+    <div className={`cd${past ? ' past' : ''}`} aria-live="off" tabIndex={0} aria-label="Time until reset">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={past ? T.muted : T.grok} strokeWidth="2.4" strokeLinecap="round" aria-hidden><path d="M20 12a8 8 0 1 1-2.34-5.66" /><path d="M20 4v4h-4" /></svg>
+      {past ? 'reset' : fmtLeft(resetMs - now)}
     </div>
   );
 }
 
-function Gauge() {
-  const r = 80, c = 2 * Math.PI * r, arc = 0.75; // 270° arc
-  const L = c * arc;
-  const used = (W.limitUsedPct / 100) * L, grok = (W.grokBotUsedPct / 100) * L;
-  const common = { cx: 100, cy: 100, r, fill: 'none', strokeLinecap: 'round' as const, transform: 'rotate(135 100 100)' };
+function HeroLimit() {
   return (
-    <svg viewBox="0 0 200 175" className="gauge" role="img" aria-label={`Weekly limit ${W.limitUsedPct}% used`}>
-      <defs><filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter></defs>
-      <circle {...common} stroke="#141b24" strokeWidth={14} strokeDasharray={`${L} ${c}`} />
-      <circle {...common} stroke="#1d5f6b" strokeWidth={14} strokeDasharray={`${used} ${c}`} />
-      <circle {...common} stroke={ACCENT} strokeWidth={14} strokeDasharray={`${grok} ${c}`} filter="url(#glow)" />
-      <text x="100" y="98" textAnchor="middle" className="g-big">{W.limitUsedPct}<tspan className="g-pct">%</tspan></text>
-      <text x="100" y="118" textAnchor="middle" className="g-lbl">WEEKLY LIMIT</text>
-    </svg>
+    <section className="card hero" aria-label="Weekly limit">
+      <div className="lbl"><i>01</i>Left this week<span className="r">shared limit</span></div>
+      <div className="hero-top">
+        <div><div className="big" style={{ color: th }}>{left}<small>%</small></div><div className="big-sub"><span className="num">{used}%</span> used</div></div>
+        <div className="reset"><CountdownChip /><span>{resetLabel(W.resetsAt)}</span></div>
+      </div>
+      <div className="cap" style={{ ['--th' as string]: th }}>
+        <div className="cap-bar" role="img" aria-label={`Grok Bot ${grok}%, other apps ${other}%, left ${left}%`}>
+          <div className="seg-grok" style={{ flex: grok }} /><div className="seg-other" style={{ flex: other }} /><div className="seg-left" style={{ flex: left }} />
+        </div>
+        <div className="cap-leg">
+          <div><span><i className="sw" style={{ background: 'var(--grok)' }} />Grok Bot</span><b style={{ color: 'var(--grok)' }}>{grok}%</b></div>
+          <div><span><i className="sw" style={{ background: 'var(--other)' }} />Other apps</span><b>{other}%</b></div>
+          <div><span><i className="sw sw-left" />Left</span><b style={{ color: th }}>{left}%</b></div>
+        </div>
+      </div>
+    </section>
   );
 }
 
-const axis = { stroke: '#4a5566', fontSize: 10, fontFamily: 'var(--mono)', tickLine: false, axisLine: false };
-
-function Tip({ active, payload, label }: any) {
+function Tip({ active, payload, label, keys, color, nameOf }: any) {
   if (!active || !payload?.length) return null;
-  const rows = payload.filter((p: any) => p.value > 0);
+  const row = payload[0].payload;
+  const rows = (keys as string[]).filter(k => (row[k] ?? 0) > 0).reverse();
   return (
     <div className="tip">
-      <div className="tip-h">{label}</div>
-      {rows.length === 0 ? <div className="tip-r"><span>—</span></div> : rows.slice().reverse().map((p: any) => (
-        <div key={p.dataKey} className="tip-r"><i style={{ background: p.fill }} /><span>{p.dataKey}</span><b>{fmt(p.value)}</b></div>
+      <div className="tip-h">{dayLabel(label)}{row.total != null ? <> · <b style={{ color: T.text }}>{fmt(row.total)}%</b></> : null}</div>
+      {rows.length === 0 ? <div className="tip-r">—</div> : rows.map(k => (
+        <div key={k} className="tip-r"><i className="sw" style={{ background: color(k) }} /><span>{nameOf(k)}</span><b>{fmt(row[k])}</b></div>
       ))}
     </div>
   );
 }
 
-function Legend({ items }: { items: { name: string; color: string }[] }) {
-  return <div className="legend">{items.map(i => <span key={i.name}><i style={{ background: i.color }} />{i.name}</span>)}</div>;
+function useWidth() {
+  const ref = useRef<HTMLDivElement>(null); const [w, setW] = useState(0);
+  useEffect(() => { const el = ref.current; if (!el) return; const ro = new ResizeObserver(() => setW(el.clientWidth)); ro.observe(el); setW(el.clientWidth); return () => ro.disconnect(); }, []);
+  return [ref, w] as const;
 }
 
-function Card({ title, meta, children, className = '' }: { title: string; meta?: string; children: React.ReactNode; className?: string }) {
-  return <section className={`card ${className}`}><header><h2>{title}</h2>{meta && <span className="meta mono">{meta}</span>}</header>{children}</section>;
+const tickBase = { fontSize: 11, fill: T.muted };
+
+function WeekTick({ x, y, payload, index }: any) {
+  const iso: string = payload.value; const d = +iso.slice(8);
+  const sub = index === 0 || d === 1;
+  return (<g>
+    <text x={x} y={y + 10} textAnchor="middle" {...tickBase}>{d}</text>
+    {sub && <text x={x} y={y + 24} textAnchor="middle" fontSize={9.5} fill={T.dim}>{MON[+iso.slice(5, 7) - 1].toUpperCase()}</text>}
+  </g>);
 }
 
-function Segmented({ parts, height = 10 }: { parts: { name: string; value: number; color: string }[]; height?: number }) {
-  const sum = parts.reduce((s, p) => s + p.value, 0);
+// Stacked segment: round only the top-most present segment; leave a 1px surface gap between segments.
+const segShape = (key: string, keys: string[]) => (p: any) => {
+  const { x, y, width, height, payload, fill } = p;
+  if (!height || height <= 0) return <g />;
+  const idx = keys.indexOf(key);
+  const isTop = !keys.slice(idx + 1).some(k => (payload[k] ?? 0) > 0);
+  const h = Math.max(0, height - (idx > 0 ? 1 : 0));
+  if (!isTop) return <rect x={x} y={y} width={width} height={h} fill={fill} />;
+  const r = Math.min(4, width / 2, h);
+  return <path d={`M${x},${y + h} V${y + r} q0,-${r} ${r},-${r} h${width - 2 * r} q${r},0 ${r},${r} V${y + h} Z`} fill={fill} />;
+};
+
+function WeekByBot({ ready }: { ready: boolean }) {
+  const [ref, w] = useWidth();
+  const barSize = Math.max(4, Math.min(40, (w / Math.max(1, weekSeries.length)) * 0.56));
+
+  const aria = 'This week by day: ' + weekSeries.filter(r => r.total != null).map(r => `${dayLabel(r.day)} ${fmt(r.total as number)}%`).join(', ');
   return (
-    <div className="seg" style={{ height }}>
-      {parts.filter(p => p.value > 0).map(p => <div key={p.name} title={`${p.name} ${fmt(p.value)}`} style={{ flex: p.value / sum, background: p.color }} />)}
-    </div>
+    <section className="card week">
+      <div className="lbl"><i>02</i>Bots · week<span className="r">{rangeLabel(weekDays)}</span></div>
+      <div ref={ref} className="chart chart-week" role="img" aria-label={aria}>
+        {ready && <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={weekSeries} margin={{ top: 22, right: 0, left: 0, bottom: 0 }} barCategoryGap="44%">
+            <XAxis dataKey="day" axisLine={false} tickLine={false} interval={0} height={36} tick={<WeekTick />} />
+            <ReferenceLine y={0} stroke={T.border} />
+            <Tooltip cursor={{ fill: 'rgba(46,230,255,.05)' }} content={<Tip keys={weekBots} color={botColor} nameOf={shortBot} />} />
+            {weekBots.map(b => (
+              <Bar key={b} dataKey={b} stackId="w" fill={botColor(b)} barSize={barSize} isAnimationActive={false} shape={segShape(b, weekBots)}>
+              </Bar>
+            ))}
+            <Bar dataKey={() => 0} stackId="w" barSize={barSize} isAnimationActive={false} legendType="none" fill="transparent">
+              <LabelList content={(p: any) => {
+                const row = weekSeries[p.index]; if (!row) return null;
+                const cx = p.x + p.width / 2;
+                if (row.total == null) return <rect x={cx - 6} y={p.y - 2} width={12} height={2} rx={1} fill={T.dim} />;
+                return <text x={cx} y={p.y - 7} textAnchor="middle" fontSize={12} fontWeight={600} fill={T.text}>{fmt(row.total)}</text>;
+              }} />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>}
+      </div>
+      <div className="legend">{weekBots.map(b => <span key={b}><i className="sw" style={{ background: botColor(b) }} />{shortBot(b)}</span>)}</div>
+    </section>
+  );
+}
+
+function BotRank30d() {
+  const max = Math.max(0, ...BOTS30.map(b => b.total)) || 1;
+  return (
+    <section className="card bots">
+      <div className="lbl"><i>02</i>Bots · 30d<span className="r">{rangeLabel(monthDays)}</span></div>
+      <div className="rank">
+        {BOTS30.map(b => (
+          <div className="rk" key={b.bot}>
+            <div className="n"><i className="sw" style={{ background: botColor(b.bot) }} /><em>{b.bot}</em></div>
+            <b>{fmt(b.total)}%</b>
+            <div className="t"><div style={{ width: `${(b.total / max) * 100}%`, background: botColor(b.bot) }} /></div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MonthTick({ x, y, payload, index }: any) {
+  if (index % 7 !== 0) return null;
+  return <text x={index === 0 ? x - 4 : x} y={y + 10} textAnchor={index === 0 ? 'start' : 'middle'} {...tickBase}>{dayLabel(payload.value)}</text>;
+}
+
+function Where({ ready }: { ready: boolean }) {
+  const mixTotal = activityMix.reduce((s, a) => s + a.value, 0) || 1;
+  const keys = ACTIVITIES.map(a => `v:${a}`);
+  const [ref, w] = useWidth();
+  const barSize = Math.max(3, (w / Math.max(1, monthSeries.length)) * 0.62);
+  const sp = spikeDay;
+  const spikeIdx = sp ? monthSeries.findIndex(r => r.day === sp.day) : -1;
+  return (
+    <section className="card where">
+      <div className="lbl"><i>03</i>Where · 30d<span className="r">≈ share</span></div>
+      <div className="mix" role="img" aria-label={'Activity mix: ' + activityMix.map(a => `${a.name} ≈${Math.round(a.value)}`).join(', ')}>
+        {activityMix.filter(a => a.value > 0).map(a => <div key={a.name} style={{ flex: a.value, background: actColor(a.name) }}>{(a.value / mixTotal) * 100 >= 20 ? `≈${Math.round(a.value)}` : ''}</div>)}
+      </div>
+      <div className="legend">{activityMix.map(a => <span key={a.name}><i className="sw" style={{ background: actColor(a.name) }} />{a.name} <b>≈{a.value > 0 && a.value < 1 ? '<1' : Math.round(a.value)}</b></span>)}</div>
+      <div className="sub">Daily<span className="r">{rangeLabel(monthDays)}</span></div>
+      <div ref={ref} className="chart chart-month" role="img" aria-label={sp ? `Last 30 days by day; peak ${fmt(sp.total)}% on ${dayLabel(sp.day)}` : 'Last 30 days by day'}>
+        {ready && <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={monthSeries} margin={{ top: 22, right: 0, left: 0, bottom: 0 }} barCategoryGap="38%">
+            <XAxis dataKey="day" axisLine={false} tickLine={false} interval={0} height={20} tick={<MonthTick />} />
+            <ReferenceLine y={0} stroke={T.border} />
+            <Tooltip cursor={{ fill: 'rgba(46,230,255,.05)' }} content={<Tip keys={ACTIVITIES} color={actColor} nameOf={(k: string) => k} />} />
+            {ACTIVITIES.map((a, i) => (
+              <Bar key={a} dataKey={keys[i]} name={a} stackId="m" barSize={barSize} fill={actColor(a)} isAnimationActive={false}>
+                {i === ACTIVITIES.length - 1 && sp && <LabelList content={(p: any) => {
+                  if (p.index !== spikeIdx) return null;
+                  return <text x={p.x + p.width + 6} y={p.y + 10} fontSize={12} fontWeight={600} fill={T.text}>{fmt(sp.total)}% <tspan fill={T.muted} fontWeight={400}>{dayLabel(sp.day)}</tspan></text>;
+                }} />}
+              </Bar>
+            ))}
+          </BarChart>
+        </ResponsiveContainer>}
+      </div>
+    </section>
+  );
+}
+
+function BotActivityMatrix() {
+  const max = Math.max(0, ...BOTS30.flatMap(b => Object.values(b.activity))) || 1;
+  const routines = (data.last30.byRoutine ?? []).filter(r => r.routine !== 'Not from a routine');
+  return (
+    <section className="card matrix">
+      <div className="lbl"><i>03</i>Bot × activity<span className="r">30d</span></div>
+      <table className="mx">
+        <thead><tr><th />{ACTIVITIES.map(a => <th key={a}>{ACT_HEAD[a] ?? a}</th>)}</tr></thead>
+        <tbody>{BOTS30.map(b => (
+          <tr key={b.bot}>
+            <td className="rn"><i className="sw" style={{ background: botColor(b.bot) }} />{shortBot(b.bot)}</td>
+            {ACTIVITIES.map(a => {
+              const v = b.activity[a];
+              if (!v) return <td key={a} className="z">·</td>;
+              const al = 0.10 + 0.75 * Math.sqrt(v / max);
+              return <td key={a} className={al > 0.55 ? 'hot' : ''} style={{ background: `rgba(var(--heat-rgb),${al.toFixed(2)})` }}>{fmt(v)}</td>;
+            })}
+          </tr>
+        ))}</tbody>
+      </table>
+      {routines.length > 0 && <div className="rt"><span>Routines:</span>{routines.map(r => <span key={r.routine}>{r.routine} <b>{fmt(r.share)}%</b>{r.status ? ` · ${r.status}` : ''}</span>)}</div>}
+    </section>
   );
 }
 
 export default function Dashboard() {
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
-  const weekBots = ALL_BOTS.filter(b => weekSeries.some(r => (r[b] as number) > 0));
-  const spike = monthSeries.reduce((m, r) => ((r.total as number) > (m.total as number) ? r : m));
-  const max30 = Math.max(...data.last30.byBotActivity.map(b => b.total));
-  const routines = data.last30.byRoutine;
-  const snap = new Date(data.snapshotAt).toLocaleString('en-US', { timeZone: 'America/Toronto', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  const reset = new Date(W.resetsAt).toLocaleString('en-US', { timeZone: 'America/Toronto', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-
   return (
     <main>
       <div className="top">
-        <div className="brand mono">botboard<span>.</span></div>
-        {data.plan && <div className="plan mono">{data.plan}</div>}
+        <div className="brand">botboard<b>.</b></div>
+        {data.plan && <span className="chip">{data.plan.toUpperCase()}</span>}
+        <div className="sp" />
+        <span className="chip">{snapLabel(data.snapshotAt)}</span>
       </div>
-
       <div className="grid">
-        <Card title="Week" meta={W.window} className="hero">
-          <div className="hero-in">
-            <Gauge />
-            <div className="hero-side">
-              <div className="stat"><i style={{ background: ACCENT, boxShadow: `0 0 8px ${ACCENT}` }} /><span>Grok Bot</span><b className="mono">{W.grokBotUsedPct}%</b></div>
-              <div className="stat"><i style={{ background: '#1d5f6b' }} /><span>Other apps</span><b className="mono">{(W.limitUsedPct - W.grokBotUsedPct).toFixed(1)}%</b></div>
-              <div className="stat"><i style={{ background: '#141b24', border: '1px solid #2a3442' }} /><span>Left</span><b className="mono">{(100 - W.limitUsedPct).toFixed(1)}%</b></div>
-              <div className="reset"><span>Resets</span><em className="mono">{reset} ET</em></div>
-              <Countdown to={W.resetsAt} />
-            </div>
-          </div>
-        </Card>
-
-        <Card title="This week · by bot" meta="Oct 29 – Nov 4" className="week">
-          <div className="chart h220">
-            {ready && <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weekSeries} margin={{ top: 8, right: 4, left: -22, bottom: 0 }} barCategoryGap="22%">
-                <CartesianGrid vertical={false} stroke="#1a222d" strokeDasharray="2 4" />
-                <XAxis dataKey="label" {...axis} interval={0} tickFormatter={(v: string) => v.split(' ')[1]} />
-                <YAxis {...axis} tickFormatter={v => `${v}`} />
-                <Tooltip content={<Tip />} cursor={{ fill: 'rgba(34,229,255,0.05)' }} />
-                {weekBots.map((b, i) => <Bar key={b} dataKey={b} stackId="a" fill={botColor(b)} isAnimationActive={false} radius={i === weekBots.length - 1 ? [3, 3, 0, 0] : 0} />)}
-              </BarChart>
-            </ResponsiveContainer>}
-          </div>
-          <Legend items={weekBots.map(b => ({ name: b, color: botColor(b) }))} />
-        </Card>
-
-        <Card title="30 days · by activity" meta="Oct 5 – Nov 4" className="month">
-          <div className="chart h240">
-            {ready && <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthSeries} margin={{ top: 22, right: 4, left: -22, bottom: 0 }} barCategoryGap="18%">
-                <CartesianGrid vertical={false} stroke="#1a222d" strokeDasharray="2 4" />
-                <XAxis dataKey="label" {...axis} interval={6} />
-                <YAxis {...axis} domain={[0, 80]} ticks={[0, 20, 40, 60, 80]} />
-                <Tooltip content={<Tip />} cursor={{ fill: 'rgba(34,229,255,0.05)' }} />
-                {ACTIVITIES.map(a => <Bar key={a} dataKey={a} stackId="a" fill={ACT_COLORS[a]} isAnimationActive={false} />)}
-                <ReferenceDot x={spike.label as string} y={spike.total as number} r={0} label={{ value: `${spike.total}%`, position: 'top', fill: ACCENT, fontSize: 10, fontFamily: 'var(--mono)' }} />
-              </BarChart>
-            </ResponsiveContainer>}
-          </div>
-          <Legend items={ACTIVITIES.map(a => ({ name: a, color: ACT_COLORS[a] }))} />
-        </Card>
-
-        <Card title="30 days · by bot" className="bots">
-          <div className="rank">
-            {data.last30.byBotActivity.map(b => (
-              <div key={b.bot} className="rank-row">
-                <div className="rank-h"><span><i style={{ background: botColor(b.bot) }} />{b.bot}</span><b className="mono">{fmt(b.total)}</b></div>
-                <div className="rank-track">
-                  <div style={{ width: `${Math.max(2, (b.total / max30) * 100)}%` }}>
-                    <Segmented parts={ACTIVITIES.map(a => ({ name: a, value: (b.activity as Record<string, number>)[a] ?? 0, color: ACT_COLORS[a] }))} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <Card title="Activity mix" className="mix">
-          <Segmented height={14} parts={activityMix.map(a => ({ ...a, color: ACT_COLORS[a.name] }))} />
-          <div className="mix-list">
-            {activityMix.map(a => <div key={a.name}><i style={{ background: ACT_COLORS[a.name] }} /><span>{a.name}</span><b className="mono">~{Math.round(a.value)}%</b></div>)}
-          </div>
-          <h3>Routines</h3>
-          <div className="routines">
-            {routines.map(r => (
-              <div key={r.routine} className="rt">
-                <span>{r.routine}{'status' in r && r.status ? <em> · {r.status}</em> : null}</span>
-                <div className="rt-bar"><div style={{ width: `${Math.max(1.5, r.share)}%`, background: r.routine === 'Not from a routine' ? '#2f3b4c' : ACT_COLORS.Routines }} /></div>
-                <b className="mono">{fmt(r.share)}</b>
-              </div>
-            ))}
-          </div>
-        </Card>
+        <HeroLimit />
+        <WeekByBot ready={ready} />
+        <BotRank30d />
+        <Where ready={ready} />
+        <BotActivityMatrix />
       </div>
-
-      <footer className="mono">
-        <span>Snapshot {snap} ET</span>
-        <span>Values are shares of Grok Bot usage</span>
-        <span>&lt;1% shown as &lt;1% · mix ≈ summed from per-bot</span>
-        <span>Token counts and per-project splits not available</span>
-      </footer>
+      <footer>% = share of Grok Bot usage · &lt;1 = under 1%</footer>
     </main>
   );
 }

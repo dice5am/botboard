@@ -1,45 +1,98 @@
 import raw from './data/usage.json';
-export const data = raw;
-export const ACCENT = '#22e5ff';
-export const BOT_COLORS: Record<string, string> = {
-  'Retired bots & group chats': '#5b6b82',
-  'Chief of Staff': '#4f8cff',
-  'Head of Engineering': '#8b7cf6',
-  'App Builder': '#3ddc97',
-  'Data Engineer': '#f2b65a',
-  'Fleet Architect': '#e8749a',
-};
-export const ACTIVITIES = ['Group chats', 'Bot-to-bot', 'Chats with you', 'Routines'] as const;
-export const ACT_COLORS: Record<string, string> = {
-  'Group chats': '#22e5ff', 'Bot-to-bot': '#8b7cf6', 'Chats with you': '#3ddc97', 'Routines': '#f2b65a',
-};
-export const botColor = (b: string) => BOT_COLORS[b] ?? '#7a8699';
-export const fmt = (v: number | undefined) => v == null ? '–' : v === 0.5 ? '<1%' : `${v}%`;
-export const BOTS = data.last30.byBotActivity.map(b => b.bot);
-const weekBots = data.weekly.byDayBot.flatMap(d => Object.keys(d.bots));
-export const ALL_BOTS = [...BOTS, ...weekBots.filter(b => !BOTS.includes(b))].filter((b, i, a) => a.indexOf(b) === i);
 
-function days(from: string, to: string) {
-  const out: string[] = []; const d = new Date(from + 'T00:00:00Z'); const e = new Date(to + 'T00:00:00Z');
-  while (d <= e) { out.push(d.toISOString().slice(0, 10)); d.setUTCDate(d.getUTCDate() + 1); }
-  return out;
+// Loose types so nightly rewrites (new bots/days/activities, missing optional fields) still compile.
+type Num = Record<string, number>;
+export type Usage = {
+  snapshotAt: string; plan?: string;
+  weekly: { limitUsedPct: number; grokBotUsedPct: number; resetsAt: string; window?: string; byDayBot: { day: string; total: number; bots: Num }[] };
+  last30: { window?: string; byBotActivity: { bot: string; total: number; activity: Num; lt1?: boolean }[];
+    byDayActivity: { day: string; total: number; activity: Num }[]; byRoutine?: { routine: string; share: number; status?: string; lt1?: boolean }[] };
+};
+export const data = raw as unknown as Usage;
+
+// Hex mirrors of design/tokens.css (SVG fill attributes can't read CSS vars).
+export const T = { grok: '#2EE6FF', text: '#EAF2FB', muted: '#8D9AAE', dim: '#5F6B7D', border: '#1C2531', surface: '#0C1118', unknown: '#7A8699' };
+const BOT_HEX: Record<string, string> = {
+  'Retired bots & group chats': '#66707F', 'Chief of Staff': '#4D8DFF', 'Head of Engineering': '#9D7BFF',
+  'App Builder': '#2FD9A0', 'Data Engineer': '#FF7AB6', 'Fleet Architect': '#C6E26A',
+};
+export const botColor = (b: string) => BOT_HEX[b] ?? T.unknown;
+export const shortBot = (b: string) => (b === 'Retired bots & group chats' ? 'Retired & group' : b);
+
+const KNOWN_ACTS = ['Group chats', 'Bot-to-bot', 'Chats with you', 'Routines'];
+const ACT_HEX: Record<string, string> = { 'Group chats': '#2EE6FF', 'Bot-to-bot': '#1E93AD', 'Chats with you': '#E6FAFF', 'Routines': '#6F8794' };
+export const actColor = (a: string) => ACT_HEX[a] ?? T.unknown;
+export const ACT_HEAD: Record<string, string> = { 'Group chats': 'Group', 'Bot-to-bot': 'B↔B', 'Chats with you': 'You', 'Routines': 'Rout.' };
+
+const seenActs = [...data.last30.byBotActivity.flatMap(b => Object.keys(b.activity)), ...data.last30.byDayActivity.flatMap(d => Object.keys(d.activity))];
+export const ACTIVITIES = [...KNOWN_ACTS.filter(a => seenActs.includes(a)), ...seenActs.filter((a, i) => !KNOWN_ACTS.includes(a) && seenActs.indexOf(a) === i)];
+
+/** 0.5 is the stored stand-in for "<1". */
+export const isLt1 = (v: number) => v === 0.5;
+export const fmt = (v: number | undefined | null) => (v == null ? '—' : isLt1(v) ? '<1' : String(+v.toFixed(1)));
+export const round1 = (v: number) => Math.round(v * 10) / 10;
+
+export const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const TZ = 'America/Toronto';
+export const snapLabel = (iso: string) => new Date(iso).toLocaleString('en-US', { timeZone: TZ, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET';
+export const resetLabel = (iso: string) => new Date(iso).toLocaleString('en-US', { timeZone: TZ, weekday: 'short', hour: 'numeric', minute: '2-digit' }) + ' ET';
+
+/** Parse "Oct 29 - Nov 4 (UTC)" → ISO day list; fall back to the min/max days present in the series. */
+function windowDays(win: string | undefined, present: string[], refYear: number): string[] {
+  let start: string | undefined, end: string | undefined;
+  const m = win?.match(/([A-Z][a-z]{2})\s+(\d{1,2})\s*[-–]\s*([A-Z][a-z]{2})\s+(\d{1,2})/);
+  if (m) {
+    const sm = MON.indexOf(m[1]), em = MON.indexOf(m[3]);
+    if (sm >= 0 && em >= 0) {
+      const sy = sm > em ? refYear - 1 : refYear;
+      start = `${sy}-${String(sm + 1).padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+      end = `${refYear}-${String(em + 1).padStart(2, '0')}-${m[4].padStart(2, '0')}`;
+    }
+  }
+  if (!start || !end) { const s = [...present].sort(); start = s[0]; end = s[s.length - 1]; }
+  if (!start || !end) return [];
+  const out: string[] = []; const d = new Date(start + 'T00:00:00Z'); const e = new Date(end + 'T00:00:00Z');
+  while (d <= e && out.length < 400) { out.push(d.toISOString().slice(0, 10)); d.setUTCDate(d.getUTCDate() + 1); }
+  for (const p of present) if (!out.includes(p)) out.push(p);
+  return out.sort();
 }
-const lbl = (iso: string) => { const [, m, d] = iso.split('-'); return `${['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m]} ${+d}`; };
-// Windows from data: "Oct 29 - Nov 4 (UTC)" and "Oct 5 - Nov 4 (UTC)"; missing days filled as 0.
-export const weekSeries = days('2026-10-29', '2026-11-04').map(day => {
+const refYear = +data.snapshotAt.slice(0, 4);
+export const dayLabel = (iso: string) => `${MON[+iso.slice(5, 7) - 1]} ${+iso.slice(8, 10)}`;
+export const rangeLabel = (days: string[]) => (days.length ? `${dayLabel(days[0])} – ${dayLabel(days[days.length - 1])}` : '');
+
+// Bot order: byBotActivity order (desc total), then week-only bots.
+const b30 = [...data.last30.byBotActivity].sort((a, b) => b.total - a.total);
+export const BOTS30 = b30;
+const weekOnly = data.weekly.byDayBot.flatMap(d => Object.keys(d.bots)).filter(b => !b30.some(x => x.bot === b));
+export const BOT_ORDER = [...b30.map(b => b.bot), ...weekOnly.filter((b, i) => weekOnly.indexOf(b) === i)];
+
+export const weekDays = windowDays(data.weekly.window, data.weekly.byDayBot.map(d => d.day), refYear);
+export type WeekRow = { day: string; total: number | null; [bot: string]: number | string | null };
+export const weekSeries: WeekRow[] = weekDays.map(day => {
   const r = data.weekly.byDayBot.find(x => x.day === day);
-  const row: Record<string, number | string> = { day, label: lbl(day), total: r?.total ?? 0 };
-  ALL_BOTS.forEach(b => { row[b] = (r?.bots as Record<string, number> | undefined)?.[b] ?? 0; });
+  const row: WeekRow = { day, total: r ? r.total : null };
+  BOT_ORDER.forEach(b => { row[b] = r?.bots[b] ?? 0; });
   return row;
 });
-export const monthSeries = days('2026-10-05', '2026-11-04').map(day => {
+export const weekBots = BOT_ORDER.filter(b => data.weekly.byDayBot.some(r => (r.bots[b] ?? 0) > 0));
+
+export const monthDays = windowDays(data.last30.window, data.last30.byDayActivity.map(d => d.day), refYear);
+export const monthMax = Math.max(0, ...data.last30.byDayActivity.map(d => d.total));
+/** Each activity gets a raw value (for tooltip) and a draw value `v:<act>`; tiny days are scaled up to a min visible height. */
+export const monthSeries = monthDays.map(day => {
   const r = data.last30.byDayActivity.find(x => x.day === day);
-  const row: Record<string, number | string> = { day, label: lbl(day), total: r?.total ?? 0 };
-  ACTIVITIES.forEach(a => { row[a] = (r?.activity as Record<string, number> | undefined)?.[a] ?? 0; });
+  const row: Record<string, number | string | null> = { day, total: r ? r.total : null };
+  const sum = r ? ACTIVITIES.reduce((s, a) => s + (r.activity[a] ?? 0), 0) : 0;
+  const minTotal = monthMax * 0.03;
+  const drawTotal = r ? Math.max(r.total, minTotal) : 0;
+  ACTIVITIES.forEach(a => {
+    const v = r?.activity[a] ?? 0;
+    row[a] = v;
+    row[`v:${a}`] = sum > 0 ? (v / sum) * drawTotal : 0;
+  });
   return row;
 });
-// Overall activity mix: derived by summing last30.byBotActivity (no overall field in data).
-export const activityMix = ACTIVITIES.map(a => ({
-  name: a,
-  value: data.last30.byBotActivity.reduce((s, b) => s + ((b.activity as Record<string, number>)[a] ?? 0), 0),
-}));
+export const spikeDay = data.last30.byDayActivity.reduce<typeof data.last30.byDayActivity[number] | null>((m, r) => (!m || r.total > m.total ? r : m), null);
+
+// Derived: overall activity mix = Σ byBotActivity[].activity[a] (no overall field in the data).
+export const activityMix = ACTIVITIES.map(a => ({ name: a, value: data.last30.byBotActivity.reduce((s, b) => s + (b.activity[a] ?? 0), 0) }));

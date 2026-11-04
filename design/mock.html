@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>botboard — mock</title>
+<style>
+/* botboard design tokens — paste into app/globals.css (replaces the old :root block) */
+:root {
+  /* Surfaces */
+  --bg: #06090E;            /* page */
+  --bg-glow: rgba(46, 230, 255, 0.06); /* top radial glow only */
+  --surface: #0C1118;       /* cards */
+  --surface-2: #121924;     /* tracks, matrix cells, chips, toggles */
+  --border: #1C2531;        /* 1px card + divider */
+  --border-strong: #2A3546; /* focus-adjacent / hover */
+
+  /* Text (contrast measured on --surface) */
+  --text: #EAF2FB;          /* 16.6:1 */
+  --text-muted: #8D9AAE;    /* 6.6:1 — labels, ticks, legends */
+  --text-dim: #5F6B7D;      /* 3.4:1 — NON-TEXT ONLY (strokes, empty-day stubs) */
+
+  /* Weekly limit (hero) */
+  --grok: #2EE6FF;          /* accent = Grok Bot. Only Grok Bot-in-limit + focus ring */
+  --grok-glow: rgba(46, 230, 255, 0.45);
+  --other: #506483;         /* other apps share of the limit */
+  --left: #DCE7F3;          /* remaining capacity (outline + number) when left >= 20% */
+  --left-fill: #141C27;     /* remaining capacity segment fill (hatched) */
+  --warn: #FFB547;          /* left < 20%  (replaces --left) */
+  --crit: #FF5D5D;          /* left < 5%   (replaces --left) */
+
+  /* Bots — stable map, keyed by exact bot name in usage.json */
+  --bot-chief-of-staff: #4D8DFF;
+  --bot-head-of-engineering: #9D7BFF;
+  --bot-app-builder: #2FD9A0;
+  --bot-data-engineer: #FF7AB6;
+  --bot-fleet-architect: #C6E26A;
+  --bot-retired: #66707F;   /* 'Retired bots & group chats' — desaturated grey */
+  --bot-unknown: #7A8699;   /* fallback for any new bot name */
+
+  /* Activity types — one cyan-family ramp (all of it is Grok Bot), never reused for bots */
+  --act-group-chats: #2EE6FF;
+  --act-bot-to-bot: #1E93AD;
+  --act-chats-with-you: #E6FAFF;
+  --act-routines: #6F8794;
+
+  /* Heat matrix: cell background = rgba(46,230,255, alpha); alpha = 0.08 + 0.72*sqrt(v/max) */
+  --heat-rgb: 46, 230, 255;
+
+  /* Type */
+  --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --fs-hero: 64px;   --lh-hero: 0.9;   /* desktop 88px */
+  --fs-stat: 20px;   --lh-stat: 1.1;
+  --fs-body: 13px;   --lh-body: 1.4;
+  --fs-label: 11px;  --lh-label: 1.2;  /* uppercase section labels, tracking .14em */
+  --fs-value: 12px;  --lh-value: 1.2;  /* mono value labels on bars */
+  --fs-micro: 11px;                    /* never smaller than 11px */
+
+  /* Spacing — 4px grid */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px;
+  --page-pad: 16px;         /* desktop 32px */
+  --card-pad: 16px;         /* desktop 24px */
+  --gap: 12px;              /* desktop 20px */
+  --radius-card: 16px;
+  --radius-chip: 999px;
+  --radius-bar: 4px;
+  --touch: 44px;
+
+  /* Chart heights */
+  --h-capacity: 20px;       /* desktop 24px */
+  --h-week: 168px;          /* desktop 220px */
+  --h-month: 128px;         /* desktop 180px */
+  --h-rank-bar: 10px;
+  --h-mix: 28px;
+}
+@media (min-width: 1024px) {
+  :root {
+    --fs-hero: 88px; --page-pad: 32px; --card-pad: 24px; --gap: 20px;
+    --h-capacity: 24px; --h-week: 220px; --h-month: 180px;
+  }
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:var(--font-sans);-webkit-font-smoothing:antialiased}
+body{background:radial-gradient(900px 420px at 50% -180px,var(--bg-glow),transparent 70%),var(--bg);min-height:100vh}
+.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+main{max-width:1200px;margin:0 auto;padding:var(--s-4) var(--page-pad) var(--s-8)}
+.top{display:flex;align-items:center;gap:var(--s-2);height:var(--touch);margin-bottom:var(--s-2)}
+.brand{font-family:var(--font-mono);font-weight:600;font-size:15px;letter-spacing:.02em}
+.brand b{color:var(--grok);text-shadow:0 0 10px var(--grok-glow)}
+.chip{font-family:var(--font-mono);font-size:var(--fs-micro);color:var(--text-muted);border:1px solid var(--border);background:var(--surface-2);border-radius:var(--radius-chip);padding:4px 10px;white-space:nowrap}
+.top .sp{flex:1}
+.grid{display:grid;gap:var(--gap);grid-template-columns:1fr}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:var(--card-pad);min-width:0}
+.lbl{display:flex;align-items:center;gap:var(--s-2);font-size:var(--fs-label);letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);font-weight:500;margin-bottom:var(--s-4)}
+.lbl i{font-style:normal;font-family:var(--font-mono);color:var(--grok);letter-spacing:0}
+.lbl .r{margin-left:auto;letter-spacing:0;text-transform:none;font-family:var(--font-mono)}
+/* hero */
+.hero-top{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s-3)}
+.big{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:var(--fs-hero);line-height:var(--lh-hero);font-weight:600;letter-spacing:-.04em;color:var(--warn)}
+.big small{font-size:.42em;letter-spacing:0;margin-left:2px}
+.big-sub{font-size:var(--fs-body);color:var(--text-muted);margin-top:var(--s-2)}
+.reset{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.cd{display:inline-flex;align-items:center;gap:6px;height:var(--touch);padding:0 14px;border-radius:var(--radius-chip);border:1px solid rgba(46,230,255,.35);background:rgba(46,230,255,.06);font-family:var(--font-mono);font-size:16px;font-weight:600;color:var(--text)}
+.cd svg{flex:none}
+.reset span{font-size:var(--fs-micro);color:var(--text-muted);font-family:var(--font-mono)}
+.cap{margin-top:var(--s-5)}
+.cap-bar{display:flex;height:var(--h-capacity);gap:2px;border-radius:6px;overflow:hidden}
+.cap-bar div{height:100%}
+.seg-grok{background:var(--grok);box-shadow:0 0 16px var(--grok-glow)}
+.seg-other{background:var(--other)}
+.seg-left{background:repeating-linear-gradient(135deg,var(--left-fill) 0 4px,#1b2532 4px 6px);box-shadow:inset 0 0 0 1.5px var(--warn);border-radius:0 6px 6px 0}
+.cap-leg{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-2);margin-top:var(--s-3)}
+.cap-leg div{display:flex;flex-direction:column;gap:2px}
+.cap-leg span{display:flex;align-items:center;gap:6px;font-size:var(--fs-micro);color:var(--text-muted)}
+.cap-leg b{font-family:var(--font-mono);font-size:var(--fs-stat);line-height:var(--lh-stat);font-weight:500}
+.sw{width:8px;height:8px;border-radius:2px;flex:none;display:inline-block}
+.sw-left{background:var(--left-fill);box-shadow:inset 0 0 0 1.5px var(--warn)}
+/* charts */
+svg text{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:var(--s-3);font-size:var(--fs-micro);color:var(--text-muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.rank{display:grid;gap:var(--s-3)}
+.rk{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center}
+.rk .n{display:flex;align-items:center;gap:8px;font-size:var(--fs-body);min-width:0}
+.rk .n em{font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rk b{font-family:var(--font-mono);font-weight:500;font-size:var(--fs-value)}
+.rk .t{grid-column:1/-1;height:var(--h-rank-bar);background:var(--surface-2);border-radius:var(--radius-bar)}
+.rk .t div{height:100%;border-radius:var(--radius-bar);min-width:4px}
+.mix{display:flex;height:var(--h-mix);gap:2px;border-radius:6px;overflow:hidden}
+.mix div{display:flex;align-items:center;padding-left:8px;font-family:var(--font-mono);font-size:var(--fs-value);font-weight:600;color:#06090E;white-space:nowrap;overflow:hidden;min-width:3px}
+.sub{font-size:var(--fs-micro);color:var(--text-muted);letter-spacing:.12em;text-transform:uppercase;margin:var(--s-5) 0 var(--s-2);display:flex}
+.sub .r{margin-left:auto;font-family:var(--font-mono);letter-spacing:0;text-transform:none}
+.mx{width:100%;border-collapse:separate;border-spacing:3px;table-layout:fixed;margin:0 -3px}
+.mx th{font-size:var(--fs-micro);font-weight:500;color:var(--text-muted);text-align:center;padding-bottom:4px}
+.mx th:first-child{text-align:left;width:45%}
+.mx td{height:32px;border-radius:6px;background:var(--surface-2);text-align:center;font-family:var(--font-mono);font-size:var(--fs-value);color:var(--text)}
+.mx td.rn{background:none;text-align:left;font-family:var(--font-sans);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:4px}
+.mx td.rn .sw{margin-right:6px}
+.mx td.z{color:var(--text-dim)}
+.mx td.hot{color:#06090E;font-weight:600}
+.rt{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:var(--fs-micro);color:var(--text-muted);margin-top:var(--s-3)}
+.rt b{color:var(--text);font-family:var(--font-mono);font-weight:500}
+footer{margin-top:var(--s-5);text-align:center;font-size:var(--fs-micro);color:var(--text-muted);font-family:var(--font-mono)}
+@media (min-width:1024px){
+  .grid{grid-template-columns:repeat(12,1fr)}
+  .hero{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr auto;gap:var(--s-10);align-items:center}
+  .hero .lbl{grid-column:1/-1;margin-bottom:0}
+  .hero-top{display:contents}
+  .hero .cap{margin-top:0}
+  .hero .reset{grid-column:3;grid-row:2}
+  .week{grid-column:span 7}.bots{grid-column:span 5}
+  .where{grid-column:span 7}.matrix{grid-column:span 5}
+}
+</style></head><body><main>
+<div class="top"><div class="brand">botboard<b>.</b></div><span class="chip" id="plan"></span><div class="sp"></div><span class="chip" id="snap"></span></div>
+<div class="grid">
+  <section class="card hero" aria-label="Weekly limit">
+    <div class="lbl"><i>01</i>Left this week<span class="r" id="win"></span></div>
+    <div class="hero-top">
+      <div><div class="big" id="left"></div><div class="big-sub" id="used"></div></div>
+      <div class="reset"><div class="cd" id="cd"></div><span id="resetAt"></span></div>
+    </div>
+    <div class="cap"><div class="cap-bar" id="capbar"></div><div class="cap-leg" id="capleg"></div></div>
+  </section>
+  <section class="card week"><div class="lbl"><i>02</i>Bots · week<span class="r">Oct 29 – Nov 4</span></div><div id="weekchart"></div><div class="legend" id="weekleg"></div></section>
+  <section class="card bots"><div class="lbl"><i>02</i>Bots · 30d<span class="r">Oct 5 – Nov 4</span></div><div class="rank" id="rank"></div></section>
+  <section class="card where"><div class="lbl"><i>03</i>Where · 30d<span class="r">≈ share</span></div><div class="mix" id="mix"></div><div class="legend" id="mixleg"></div>
+    <div class="sub">Daily<span class="r">Oct 5 – Nov 4</span></div><div id="monthchart"></div></section>
+  <section class="card matrix"><div class="lbl"><i>03</i>Bot × activity<span class="r">30d</span></div><table class="mx" id="mx"></table><div class="rt" id="rt"></div></section>
+</div>
+<footer>% = share of Grok Bot usage · &lt;1 = under 1%</footer>
+</main>
+<script>
+const D = {
+  "snapshotAt": "2026-11-04T18:25:00-05:00",
+  "source": "Grok Bot usage report (shares of all Grok Bot usage; '<1%' stored as 0.5 with lt1:true)",
+  "plan": "Premium",
+  "weekly": {
+    "limitUsedPct": 84.1,
+    "grokBotUsedPct": 34.5,
+    "sharedWithOtherApps": true,
+    "resetsAt": "2026-11-05T13:58:00-05:00",
+    "window": "Oct 29 - Nov 4 (UTC)",
+    "byDayBot": [
+      {
+        "day": "2026-10-29",
+        "total": 23,
+        "bots": {
+          "Retired bots & group chats": 13,
+          "Head of Engineering": 5,
+          "App Builder": 3,
+          "Chief of Staff": 2
+        }
+      },
+      {
+        "day": "2026-10-30",
+        "total": 58,
+        "bots": {
+          "Retired bots & group chats": 20,
+          "Head of Engineering": 11,
+          "App Builder": 10,
+          "Chief of Staff": 9,
+          "Data Engineer": 8
+        }
+      },
+      {
+        "day": "2026-11-04",
+        "total": 19,
+        "bots": {
+          "Data Engineer": 9,
+          "Fleet Architect": 5,
+          "Chief of Staff": 5
+        }
+      }
+    ]
+  },
+  "last30": {
+    "window": "Oct 5 - Nov 4 (UTC)",
+    "byBotActivity": [
+      {
+        "bot": "Retired bots & group chats",
+        "total": 63,
+        "activity": {
+          "Group chats": 43,
+          "Bot-to-bot": 20,
+          "Chats with you": 0.5
+        }
+      },
+      {
+        "bot": "Chief of Staff",
+        "total": 17,
+        "activity": {
+          "Group chats": 7,
+          "Chats with you": 6,
+          "Routines": 3,
+          "Bot-to-bot": 1
+        }
+      },
+      {
+        "bot": "Head of Engineering",
+        "total": 11,
+        "activity": {
+          "Group chats": 9,
+          "Bot-to-bot": 2
+        }
+      },
+      {
+        "bot": "App Builder",
+        "total": 7,
+        "activity": {
+          "Group chats": 5,
+          "Bot-to-bot": 2
+        }
+      },
+      {
+        "bot": "Data Engineer",
+        "total": 1,
+        "activity": {
+          "Bot-to-bot": 1,
+          "Group chats": 0.5,
+          "Chats with you": 0.5
+        }
+      },
+      {
+        "bot": "Fleet Architect",
+        "total": 1,
+        "activity": {
+          "Group chats": 1,
+          "Chats with you": 0.5,
+          "Bot-to-bot": 0.5
+        }
+      }
+    ],
+    "byDayActivity": [
+      {
+        "day": "2026-10-08",
+        "total": 13,
+        "activity": {
+          "Group chats": 7,
+          "Bot-to-bot": 4,
+          "Chats with you": 2
+        }
+      },
+      {
+        "day": "2026-10-09",
+        "total": 2,
+        "activity": {
+          "Group chats": 2,
+          "Chats with you": 0.5
+        }
+      },
+      {
+        "day": "2026-10-10",
+        "total": 70,
+        "activity": {
+          "Group chats": 45,
+          "Bot-to-bot": 20,
+          "Chats with you": 3,
+          "Routines": 2
+        }
+      },
+      {
+        "day": "2026-10-13",
+        "total": 0.5,
+        "activity": {
+          "Routines": 0.5
+        }
+      },
+      {
+        "day": "2026-10-15",
+        "total": 1,
+        "activity": {
+          "Bot-to-bot": 1,
+          "Chats with you": 0.5,
+          "Group chats": 0.5,
+          "Routines": 0.5
+        }
+      },
+      {
+        "day": "2026-10-16",
+        "total": 3,
+        "activity": {
+          "Group chats": 3,
+          "Bot-to-bot": 0.5,
+          "Routines": 0.5,
+          "Chats with you": 0.5
+        }
+      },
+      {
+        "day": "2026-10-17",
+        "total": 0.5,
+        "activity": {
+          "Routines": 0.5
+        }
+      },
+      {
+        "day": "2026-10-19",
+        "total": 1,
+        "activity": {
+          "Group chats": 1,
+          "Routines": 0.5
+        }
+      },
+      {
+        "day": "2026-10-23",
+        "total": 3,
+        "activity": {
+          "Group chats": 3,
+          "Bot-to-bot": 0.5,
+          "Chats with you": 0.5,
+          "Routines": 0.5
+        }
+      },
+      {
+        "day": "2026-10-24",
+        "total": 3,
+        "activity": {
+          "Group chats": 3,
+          "Bot-to-bot": 0.5,
+          "Chats with you": 0.5,
+          "Routines": 0.5
+        }
+      },
+      {
+        "day": "2026-10-29",
+        "total": 1,
+        "activity": {
+          "Group chats": 1,
+          "Routines": 0.5,
+          "Chats with you": 0.5
+        }
+      },
+      {
+        "day": "2026-10-30",
+        "total": 2,
+        "activity": {
+          "Group chats": 1,
+          "Bot-to-bot": 1,
+          "Chats with you": 0.5
+        }
+      },
+      {
+        "day": "2026-11-04",
+        "total": 1,
+        "activity": {
+          "Bot-to-bot": 1,
+          "Chats with you": 0.5
+        }
+      }
+    ],
+    "byRoutine": [
+      {
+        "routine": "unitedstats build watch",
+        "share": 1,
+        "status": "paused"
+      },
+      {
+        "routine": "Built-in check-ins",
+        "share": 0.5
+      },
+      {
+        "routine": "Not from a routine",
+        "share": 99
+      }
+    ]
+  },
+  "notAvailable": [
+    "exact token counts",
+    "usage by project",
+    "usage by model",
+    "earlier weeks' % of limit",
+    "Cursor/Cloud Agent usage"
+  ]
+};
+const W = D.weekly, L = D.last30;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const BOTVAR = {'Chief of Staff':'--bot-chief-of-staff','Head of Engineering':'--bot-head-of-engineering','App Builder':'--bot-app-builder','Data Engineer':'--bot-data-engineer','Fleet Architect':'--bot-fleet-architect','Retired bots & group chats':'--bot-retired'};
+const bc = b => css(BOTVAR[b] || '--bot-unknown');
+const ACTS = ['Group chats','Bot-to-bot','Chats with you','Routines'];
+const ACTVAR = {'Group chats':'--act-group-chats','Bot-to-bot':'--act-bot-to-bot','Chats with you':'--act-chats-with-you','Routines':'--act-routines'};
+const ac = a => css(ACTVAR[a]);
+const fmt = v => v == null || v === 0 ? '—' : v === 0.5 ? '<1' : String(+v.toFixed(1));
+const $ = id => document.getElementById(id);
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const tz = {timeZone:'America/Toronto'};
+// header
+$('plan').textContent = D.plan.toUpperCase();
+const snap = new Date(D.snapshotAt);
+$('snap').textContent = snap.toLocaleString('en-US',{...tz,month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) + ' ET';
+// hero
+const used = W.limitUsedPct, grok = W.grokBotUsedPct, other = +(used - grok).toFixed(1), left = +(100 - used).toFixed(1);
+$('left').innerHTML = left + '<small>%</small>';
+$('used').innerHTML = '<span class="num">' + used + '%</span> used';
+const ms = new Date(W.resetsAt) - snap, mins = Math.round(ms/60000);
+$('cd').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="'+css('--grok')+'" stroke-width="2.4" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg>' + Math.floor(mins/60)+'h '+String(mins%60).padStart(2,'0')+'m';
+$('resetAt').textContent = new Date(W.resetsAt).toLocaleString('en-US',{...tz,weekday:'short',hour:'numeric',minute:'2-digit'}) + ' ET';
+$('win').textContent = 'shared limit';
+$('capbar').innerHTML = `<div class="seg-grok" style="flex:${grok}"></div><div class="seg-other" style="flex:${other}"></div><div class="seg-left" style="flex:${left}"></div>`;
+$('capleg').innerHTML = [['Grok Bot',grok,'background:var(--grok)','color:var(--grok)'],['Other apps',other,'background:var(--other)','color:var(--text)'],['Left',left,'','color:var(--warn)']]
+  .map(([n,v,s,c],i)=>`<div><span><i class="sw ${i==2?'sw-left':''}" style="${s}"></i>${n}</span><b style="${c}">${v}%</b></div>`).join('');
+// week stacked columns, 7 slots
+const days = []; for (let d = new Date('2026-10-29T12:00:00Z'); d <= new Date('2026-11-04T12:00:00Z'); d.setUTCDate(d.getUTCDate()+1)) days.push(d.toISOString().slice(0,10));
+const order = L.byBotActivity.map(b=>b.bot); W.byDayBot.forEach(r=>Object.keys(r.bots).forEach(b=>{if(!order.includes(b))order.push(b)}));
+function weekChart(el){
+  const w = el.clientWidth, h = parseInt(css('--h-week')), top = 22, bot = 30, ch = h-top-bot;
+  const max = Math.max(...W.byDayBot.map(r=>r.total)); const slot = w/7, bw = Math.min(40, slot*0.56);
+  let s = `<svg width="${w}" height="${h}" role="img" aria-label="This week by day and bot">`;
+  s += `<line x1="0" x2="${w}" y1="${top+ch+.5}" y2="${top+ch+.5}" stroke="${css('--border')}"/>`;
+  days.forEach((day,i)=>{
+    const r = W.byDayBot.find(x=>x.day===day), cx = slot*i+slot/2, x = cx-bw/2;
+    const [,m,dd] = day.split('-');
+    s += `<text x="${cx}" y="${h-12}" text-anchor="middle" font-size="11" fill="${css('--text-muted')}">${+dd}</text>`;
+    if (+dd===29||+dd===1) s += `<text x="${cx}" y="${h}" text-anchor="middle" font-size="9.5" fill="${css('--text-dim')}">${MON[+m-1].toUpperCase()}</text>`;
+    if(!r){ s += `<rect x="${cx-6}" y="${top+ch-2}" width="12" height="2" rx="1" fill="${css('--text-dim')}"/>`; return; }
+    let y = top+ch; const bots = order.filter(b=>r.bots[b]);
+    bots.forEach((b,j)=>{ const hh = r.bots[b]/max*ch; y -= hh; const last = j===bots.length-1;
+      s += last ? `<path d="M${x},${y+hh-1} V${y+4} q0,-4 4,-4 h${bw-8} q4,0 4,4 V${y+hh-1} Z" fill="${bc(b)}"/>` : `<rect x="${x}" y="${y}" width="${bw}" height="${Math.max(0,hh-1)}" fill="${bc(b)}"/>`; });
+    s += `<text x="${cx}" y="${y-7}" text-anchor="middle" font-size="12" font-weight="600" fill="${css('--text')}">${r.total}</text>`;
+  });
+  el.innerHTML = s + '</svg>';
+  const present = order.filter(b=>W.byDayBot.some(r=>r.bots[b]));
+  $('weekleg').innerHTML = present.map(b=>`<span><i class="sw" style="background:${bc(b)}"></i>${b==='Retired bots & group chats'?'Retired & group':b}</span>`).join('');
+}
+// 30d rank
+const maxB = Math.max(...L.byBotActivity.map(b=>b.total));
+$('rank').innerHTML = L.byBotActivity.map(b=>`<div class="rk"><div class="n"><i class="sw" style="background:${bc(b.bot)}"></i><em>${b.bot}</em></div><b>${fmt(b.total)}%</b><div class="t"><div style="width:${b.total/maxB*100}%;background:${bc(b.bot)}"></div></div></div>`).join('');
+// mix (derived: sum of byBotActivity)
+const mix = ACTS.map(a=>({a, v:L.byBotActivity.reduce((s,b)=>s+(b.activity[a]||0),0)}));
+const SHORT = {'Group chats':'Group','Bot-to-bot':'Bot↔bot','Chats with you':'You','Routines':'Routines'};
+$('mix').innerHTML = mix.map(m=>`<div style="flex:${m.v};background:${ac(m.a)}">${m.v>=20?'≈'+Math.round(m.v):''}</div>`).join('');
+$('mixleg').innerHTML = mix.map(m=>`<span><i class="sw" style="background:${ac(m.a)}"></i>${m.a} <b class="num" style="color:var(--text);font-weight:500">≈${Math.round(m.v)}</b></span>`).join('');
+// 30d daily
+function monthChart(el){
+  const w = el.clientWidth, h = parseInt(css('--h-month')), top = 24, bot = 20, ch = h-top-bot;
+  const ds = []; for (let d = new Date('2026-10-05T12:00:00Z'); d <= new Date('2026-11-04T12:00:00Z'); d.setUTCDate(d.getUTCDate()+1)) ds.push(d.toISOString().slice(0,10));
+  const max = Math.max(...L.byDayActivity.map(r=>r.total)); const slot = w/ds.length, bw = Math.max(3, slot*0.62);
+  const minH = 2;
+  let s = `<svg width="${w}" height="${h}" role="img" aria-label="Last 30 days by day and activity">`;
+  s += `<line x1="0" x2="${w}" y1="${top+ch+.5}" y2="${top+ch+.5}" stroke="${css('--border')}"/>`;
+  let spike = null;
+  ds.forEach((day,i)=>{ const r = L.byDayActivity.find(x=>x.day===day); const x = slot*i+(slot-bw)/2;
+    const dd = +day.slice(8); const m = +day.slice(5,7);
+    if ([5,12,19,26].includes(dd)&&m===10 || (dd===2&&m===11)) s += `<text x="${i===0?0:x+bw/2}" y="${h-4}" text-anchor="${i===0?'start':'middle'}" font-size="10" fill="${css('--text-muted')}">${MON[m-1]} ${dd}</text>`;
+    if(!r) return;
+    // stacked; tiny totals get a minimum visible height
+    const totalH = Math.max(minH, r.total/max*ch); let y = top+ch;
+    const sum = ACTS.reduce((s,a)=>s+(r.activity[a]||0),0);
+    ACTS.forEach(a=>{ const v=r.activity[a]; if(!v) return; const hh = v/sum*totalH; y -= hh; s += `<rect x="${x}" y="${y}" width="${bw}" height="${hh}" fill="${ac(a)}"/>`; });
+    if (r.total===max) spike = {x:x+bw/2, y, r};
+  });
+  if (spike){ const lx = Math.min(spike.x+bw/2+6, w-92); s += `<text x="${lx}" y="${spike.y+10}" font-size="12" font-weight="600" fill="${css('--text')}">${spike.r.total}% <tspan fill="${css('--text-muted')}" font-weight="400">Oct ${+spike.r.day.slice(8)}</tspan></text>`; }
+  el.innerHTML = s + '</svg>';
+}
+// matrix
+const mmax = Math.max(...L.byBotActivity.flatMap(b=>Object.values(b.activity)));
+const HDR = {'Group chats':'Group','Bot-to-bot':'B↔B','Chats with you':'You','Routines':'Rout.'};
+$('mx').innerHTML = '<tr><th></th>'+ACTS.map(a=>`<th>${HDR[a]}</th>`).join('')+'</tr>' + L.byBotActivity.map(b=>'<tr><td class="rn"><i class="sw" style="background:'+bc(b.bot)+'"></i>'+(b.bot==='Retired bots & group chats'?'Retired & group':b.bot)+'</td>'+ACTS.map(a=>{const v=b.activity[a]; if(!v) return '<td class="z">·</td>'; const al=.10+.75*Math.sqrt(v/mmax); return `<td class="${al>.55?'hot':''}" style="background:rgba(${css('--heat-rgb')},${al.toFixed(2)})">${fmt(v)}</td>`}).join('')+'</tr>').join('');
+$('rt').innerHTML = '<span>Routines:</span>' + L.byRoutine.filter(r=>r.routine!=='Not from a routine').map(r=>`<span>${r.routine} <b>${fmt(r.share)}%</b>${r.status?' · '+r.status:''}</span>`).join('');
+weekChart($('weekchart')); monthChart($('monthchart'));
+</script></body></html>
