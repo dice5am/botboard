@@ -23,12 +23,12 @@
   --crit: #FF5D5D;          /* left < 5%   (replaces --left) */
 
   /* Bots — stable map, keyed by exact bot name in usage.json */
-  --bot-chief-of-staff: #4D8DFF;
-  --bot-head-of-engineering: #9D7BFF;
-  --bot-app-builder: #2FD9A0;
-  --bot-data-engineer: #FF7AB6;
-  --bot-fleet-architect: #C6E26A;
-  --bot-retired: #66707F;   /* 'Retired bots & group chats' — desaturated grey */
+  --bot-chief-of-staff: #FFFFFF;
+  --bot-head-of-engineering: #1084FE;
+  --bot-app-builder: #9159FE;
+  --bot-data-engineer: #FF309B;
+  --bot-fleet-architect: #8A8A8A;
+  --bot-retired: #3E4552;   /* 'Retired bots & group chats' — desaturated grey */
   --bot-unknown: #7A8699;   /* fallback for any new bot name */
 
   /* Activity types — one cyan-family ramp (all of it is Grok Bot), never reused for bots */

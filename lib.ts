@@ -13,8 +13,15 @@ export const data = raw as unknown as Usage;
 // Hex mirrors of design/tokens.css (SVG fill attributes can't read CSS vars).
 export const T = { grok: '#2EE6FF', text: '#EAF2FB', muted: '#8D9AAE', dim: '#5F6B7D', border: '#1C2531', surface: '#0C1118', unknown: '#7A8699' };
 const BOT_HEX: Record<string, string> = {
-  'Retired bots & group chats': '#66707F', 'Chief of Staff': '#4D8DFF', 'Head of Engineering': '#9D7BFF',
-  'App Builder': '#2FD9A0', 'Data Engineer': '#FF7AB6', 'Fleet Architect': '#C6E26A',
+  // Matches each bot's avatar colour in the Grok Bot app.
+  'Retired bots & group chats': '#3E4552',
+  'Chief of Staff': '#FFFFFF',
+  'Head of Engineering': '#1084FE',
+  'App Builder': '#9159FE',
+  'Data Engineer': '#FF309B',
+  'Fleet Architect': '#8A8A8A',
+  'Designer': '#FF9800',
+  'Equity Pulse': '#00C972',
 };
 export const botColor = (b: string) => BOT_HEX[b] ?? T.unknown;
 export const shortBot = (b: string) => (b === 'Retired bots & group chats' ? 'Retired & group' : b);
