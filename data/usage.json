@@ -1,48 +1,61 @@
 {
-  "snapshotAt": "2026-11-04T18:25:00-05:00",
+  "snapshotAt": "2026-11-05T01:16:00-05:00",
   "source": "Grok Bot usage report (shares of all Grok Bot usage; '<1%' stored as 0.5 with lt1:true)",
   "plan": "Premium",
   "weekly": {
-    "limitUsedPct": 84.1,
-    "grokBotUsedPct": 34.5,
+    "limitUsedPct": 98.4,
+    "grokBotUsedPct": 48.9,
     "sharedWithOtherApps": true,
     "resetsAt": "2026-11-05T13:58:00-05:00",
-    "window": "Oct 29 - Nov 4 (UTC)",
+    "window": "Oct 29 - Nov 5 (UTC)",
     "byDayBot": [
       {
         "day": "2026-10-29",
-        "total": 23,
+        "total": 16,
         "bots": {
-          "Retired bots & group chats": 13,
-          "Head of Engineering": 5,
-          "App Builder": 3,
-          "Chief of Staff": 2
+          "Retired bots & group chats": 9,
+          "Head of Engineering": 4,
+          "App Builder": 2,
+          "Chief of Staff": 1
         }
       },
       {
         "day": "2026-10-30",
-        "total": 58,
+        "total": 41,
         "bots": {
-          "Retired bots & group chats": 20,
-          "Head of Engineering": 11,
-          "App Builder": 10,
-          "Chief of Staff": 9,
-          "Data Engineer": 8
+          "Retired bots & group chats": 14,
+          "Head of Engineering": 8,
+          "App Builder": 7,
+          "Chief of Staff": 7,
+          "Data Engineer": 5
         }
       },
       {
         "day": "2026-11-04",
-        "total": 19,
+        "total": 27,
         "bots": {
-          "Data Engineer": 9,
-          "Fleet Architect": 5,
-          "Chief of Staff": 5
+          "Chief of Staff": 12,
+          "Data Engineer": 6,
+          "Fleet Architect": 4,
+          "App Builder": 3,
+          "Designer": 2
+        }
+      },
+      {
+        "day": "2026-11-05",
+        "total": 16,
+        "bots": {
+          "App Builder": 7,
+          "Data Engineer": 6,
+          "Chief of Staff": 3,
+          "Fleet Architect": 0.5,
+          "Designer": 0.5
         }
       }
     ]
   },
   "last30": {
-    "window": "Oct 5 - Nov 4 (UTC)",
+    "window": "Oct 6 - Nov 5 (UTC)",
     "byBotActivity": [
       {
         "bot": "Retired bots & group chats",
@@ -75,8 +88,8 @@
         "bot": "App Builder",
         "total": 7,
         "activity": {
-          "Group chats": 5,
-          "Bot-to-bot": 2
+          "Group chats": 4,
+          "Bot-to-bot": 3
         }
       },
       {
@@ -95,6 +108,14 @@
           "Group chats": 1,
           "Chats with you": 0.5,
           "Bot-to-bot": 0.5
+        }
+      },
+      {
+        "bot": "Designer",
+        "total": 0.5,
+        "activity": {
+          "Bot-to-bot": 0.5,
+          "Chats with you": 0.5
         }
       }
     ],
@@ -145,9 +166,9 @@
       },
       {
         "day": "2026-10-16",
-        "total": 3,
+        "total": 2,
         "activity": {
-          "Group chats": 3,
+          "Group chats": 2,
           "Bot-to-bot": 0.5,
           "Routines": 0.5,
           "Chats with you": 0.5
@@ -213,13 +234,20 @@
           "Bot-to-bot": 1,
           "Chats with you": 0.5
         }
+      },
+      {
+        "day": "2026-11-05",
+        "total": 1,
+        "activity": {
+          "Bot-to-bot": 1,
+          "Chats with you": 0.5
+        }
       }
     ],
     "byRoutine": [
       {
-        "routine": "unitedstats build watch",
-        "share": 1,
-        "status": "paused"
+        "routine": "Deleted routines",
+        "share": 1
       },
       {
         "routine": "Built-in check-ins",
